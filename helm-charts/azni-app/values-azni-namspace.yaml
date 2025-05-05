@@ -1,0 +1,48 @@
+# Custom values for azni-app deployment in azni-namspace
+replicaCount: 3
+
+image:
+  repository: nginx
+  pullPolicy: Always
+  tag: "stable"
+
+service:
+  type: LoadBalancer
+  port: 80
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    kubernetes.io/tls-acme: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: azni-app.azni-namspace.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: 
+   - secretName: azni-app-tls
+     hosts:
+       - azni-app.azni-namspace.example.com
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 512Mi
+  requests:
+    cpu: 150m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 75
+  targetMemoryUtilizationPercentage: 75
+
+# Add namespace-specific labels
+podLabels:
+  environment: production
+  namespace: azni-namspace
