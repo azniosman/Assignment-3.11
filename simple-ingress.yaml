@@ -1,21 +1,22 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: azni-app-ingress
-  namespace: azni-namspace
+  name: azni-mysql-ingress
+  namespace: azni-mysql
   annotations:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
 spec:
   rules:
-  - host: azni-namespace-sctp-sandbox.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: azni-app-service
-            port:
-              number: 80
+    - host: azni-mysql-sctp-sandbox.com
+      http:
+        paths:
+          - path: /mysql
+            pathType: Prefix
+            backend:
+              service:
+                name: azni-mysql-service
+                port:
+                  number: 3306

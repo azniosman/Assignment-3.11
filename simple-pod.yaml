@@ -1,25 +1,33 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: azni-app-pod
-  namespace: azni-namspace
+  name: azni-mysql-pod
+  namespace: azni-mysql
   labels:
-    app: azni-app
+    app: azni-mysql
 spec:
   containers:
-  - name: nginx
-    image: nginx:1.14.2
-    ports:
-    - containerPort: 80
-    volumeMounts:
-    - name: html-content
-      mountPath: /usr/share/nginx/html/
-      readOnly: true
-  volumes:
-  - name: html-content
-    configMap:
-      name: azni-app-html
+    - name: mysql
+      image: mysql:5.7
+      ports:
+        - containerPort: 3306
+      env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "password123"
+        - name: MYSQL_DATABASE
+          value: "azni_db"
+        - name: MYSQL_USER
+          value: "azni_user"
+        - name: MYSQL_PASSWORD
+          value: "azni_password"
+      resources:
+        limits:
+          memory: "512Mi"
+          cpu: "500m"
+        requests:
+          memory: "256Mi"
+          cpu: "250m"
   tolerations:
-  - key: "CriticalAddonsOnly"
-    operator: "Exists"
-    effect: "NoSchedule"
+    - key: "CriticalAddonsOnly"
+      operator: "Exists"
+      effect: "NoSchedule"
