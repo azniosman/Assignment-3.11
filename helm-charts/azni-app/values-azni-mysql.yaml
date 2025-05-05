@@ -1,17 +1,26 @@
-# Custom values for azni-app deployment in azni-namspace
+# Custom values for azni-app deployment in azni-mysql
 replicaCount: 1
 
 image:
-  repository: nginx
+  repository: mysql
   pullPolicy: IfNotPresent
-  tag: "1.14.2"
+  tag: "5.7"
 
-# No command needed for pause container
+# Environment variables for MySQL
+env:
+  - name: MYSQL_ROOT_PASSWORD
+    value: "password123"
+  - name: MYSQL_DATABASE
+    value: "azni_db"
+  - name: MYSQL_USER
+    value: "azni_user"
+  - name: MYSQL_PASSWORD
+    value: "azni_password"
 
 service:
   type: NodePort
-  port: 80
-  nodePort: 30080
+  port: 3306
+  nodePort: 30307
 
 ingress:
   enabled: true
@@ -21,9 +30,9 @@ ingress:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
   hosts:
-    - host: azni-namespace-sctp-sandbox.com
+    - host: azni-mysql-sctp-sandbox.com
       paths:
-        - path: /
+        - path: /mysql
           pathType: Prefix
   tls: []
 
@@ -45,7 +54,7 @@ autoscaling:
 # Add namespace-specific labels
 podLabels:
   environment: production
-  namespace: azni-namspace
+  namespace: azni-mysql
 
 # Add tolerations for CriticalAddonsOnly nodes
 tolerations:
@@ -53,28 +62,27 @@ tolerations:
     operator: "Exists"
     effect: "NoSchedule"
 
-# Simple probes for nginx
+# Simple probes for MySQL
 livenessProbe:
-  httpGet:
-    path: /
-    port: http
-  initialDelaySeconds: 5
+  exec:
+    command:
+      - "mysqladmin"
+      - "ping"
+      - "-h"
+      - "localhost"
+  initialDelaySeconds: 30
   periodSeconds: 10
 
 readinessProbe:
-  httpGet:
-    path: /
-    port: http
-  initialDelaySeconds: 5
+  exec:
+    command:
+      - "mysqladmin"
+      - "ping"
+      - "-h"
+      - "localhost"
+  initialDelaySeconds: 30
   periodSeconds: 10
 
-# Mount ConfigMap with HTML content
-volumes:
-  - name: html-content
-    configMap:
-      name: azni-app-html
-
-volumeMounts:
-  - name: html-content
-    mountPath: /usr/share/nginx/html/
-    readOnly: true
+# MySQL doesn't need any volumes for this basic setup
+volumes: []
+volumeMounts: []

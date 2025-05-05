@@ -43,8 +43,12 @@ spec:
           {{- if and .Values.command (ne .Values.command nil) }}
           command: {{ .Values.command }}
           {{- end }}
+          {{- if .Values.env }}
+          env:
+            {{- toYaml .Values.env | nindent 12 }}
+          {{- end }}
           ports:
-            - name: http
+            - name: mysql
               containerPort: {{ .Values.service.port }}
               protocol: TCP
           {{- if and .Values.livenessProbe (ne .Values.livenessProbe nil) }}
