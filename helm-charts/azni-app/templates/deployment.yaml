@@ -40,14 +40,14 @@ spec:
           {{- end }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- if .Values.command }}
+          {{- if and .Values.command (ne .Values.command nil) }}
           command: {{ .Values.command }}
           {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
-          {{- if .Values.livenessProbe }}
+          {{- if and .Values.livenessProbe (ne .Values.livenessProbe nil) }}
           livenessProbe:
             {{- if .Values.livenessProbe.exec }}
             exec:
@@ -67,7 +67,7 @@ spec:
             periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
             {{- end }}
           {{- end }}
-          {{- if .Values.readinessProbe }}
+          {{- if and .Values.readinessProbe (ne .Values.readinessProbe nil) }}
           readinessProbe:
             {{- if .Values.readinessProbe.exec }}
             exec:

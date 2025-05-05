@@ -1,27 +1,25 @@
 # Custom values for azni-app deployment in azni-namspace
-replicaCount: 3
+replicaCount: 1
 
 image:
-  repository: busybox
+  repository: nginx
   pullPolicy: IfNotPresent
-  tag: "latest"
+  tag: "1.14.2"
 
-# Command for busybox container
-command:
-  - "/bin/sh"
-  - "-c"
-  - "while true; do echo Hello from azni-app; sleep 10; done"
+# No command needed for pause container
 
 service:
-  type: LoadBalancer
+  type: NodePort
   port: 80
+  nodePort: 30080
 
 ingress:
   enabled: true
   className: ""
   annotations:
-    kubernetes.io/ingress.class: nginx
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
   hosts:
     - host: azni-namespace-sctp-sandbox.com
       paths:
@@ -39,10 +37,10 @@ resources:
 
 autoscaling:
   enabled: true
-  minReplicas: 3
-  maxReplicas: 6
-  targetCPUUtilizationPercentage: 75
-  targetMemoryUtilizationPercentage: 75
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
 
 # Add namespace-specific labels
 podLabels:
@@ -55,21 +53,28 @@ tolerations:
     operator: "Exists"
     effect: "NoSchedule"
 
-# Custom probes for busybox
+# Simple probes for nginx
 livenessProbe:
-  exec:
-    command:
-      - "sh"
-      - "-c"
-      - "exit 0"
+  httpGet:
+    path: /
+    port: http
   initialDelaySeconds: 5
   periodSeconds: 10
 
 readinessProbe:
-  exec:
-    command:
-      - "sh"
-      - "-c"
-      - "exit 0"
+  httpGet:
+    path: /
+    port: http
   initialDelaySeconds: 5
   periodSeconds: 10
+
+# Mount ConfigMap with HTML content
+volumes:
+  - name: html-content
+    configMap:
+      name: azni-app-html
+
+volumeMounts:
+  - name: html-content
+    mountPath: /usr/share/nginx/html/
+    readOnly: true
