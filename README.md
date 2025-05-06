@@ -10,7 +10,7 @@ This repository contains Helm charts for deploying applications to Kubernetes.
     └── azni-app/
         ├── Chart.yaml
         ├── values.yaml
-        ├── values-azni-namspace.yaml
+        ├── values-azni-mysql.yaml
         ├── templates/
         ├── charts/
         ├── README.md
@@ -23,7 +23,7 @@ This repository contains Helm charts for deploying applications to Kubernetes.
 
 ### azni-app
 
-A Helm chart for deploying a Nginx application to Kubernetes. The chart includes:
+A Helm chart for deploying a MySQL application to Kubernetes. The chart includes:
 
 - Deployment with configurable replicas
 - Service (LoadBalancer)
@@ -36,7 +36,7 @@ For more details, see the [azni-app README](helm-charts/azni-app/README.md).
 
 ## Deployment
 
-The Helm charts are configured to be deployed to the `azni-namspace` namespace on the `shared-eks-cluster` EKS cluster.
+The Helm charts are configured to be deployed to the `azni-mysql` namespace on the `dev-eks-cluster` EKS cluster.
 
 ### Prerequisites
 
@@ -73,7 +73,7 @@ cd helm-charts/azni-app
 
 ## Customization
 
-Each chart includes a default `values.yaml` file and a namespace-specific values file (e.g., `values-azni-namspace.yaml`). You can customize these files to change the behavior of the deployed applications.
+Each chart includes a default `values.yaml` file and a namespace-specific values file (e.g., `values-azni-mysql.yaml`). You can customize these files to change the behavior of the deployed applications.
 
 ## Helm Commands Reference
 
@@ -82,25 +82,25 @@ Each chart includes a default `values.yaml` file and a namespace-specific values
 helm repo add bitnami https://charts.bitnami.com/bitnami
 
 # Search for charts
-helm search repo nginx
+helm search repo mysql
 
 # Install a chart
-helm install my-release ./azni-app -n azni-namspace
+helm install my-release ./azni-app -n azni-mysql
 
 # Upgrade a release
-helm upgrade my-release ./azni-app -n azni-namspace
+helm upgrade my-release ./azni-app -n azni-mysql
 
 # Rollback a release
-helm rollback my-release 1 -n azni-namspace
+helm rollback my-release 1 -n azni-mysql
 
 # Uninstall a release
-helm uninstall my-release -n azni-namspace
+helm uninstall my-release -n azni-mysql
 
 # List releases
-helm list -n azni-namspace
+helm list -n azni-mysql
 
 # Get release history
-helm history my-release -n azni-namspace
+helm history my-release -n azni-mysql
 
 # Package a chart
 helm package ./azni-app

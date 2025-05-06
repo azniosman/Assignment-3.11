@@ -4,7 +4,7 @@
 
 # Set variables
 RELEASE_NAME="azni-app"
-NAMESPACE="azni-namspace"
+NAMESPACE="azni-mysql"
 
 # Check if release exists
 if ! helm status $RELEASE_NAME -n $NAMESPACE &> /dev/null; then

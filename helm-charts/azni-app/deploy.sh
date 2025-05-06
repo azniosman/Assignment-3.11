@@ -4,13 +4,13 @@
 
 # Set variables
 RELEASE_NAME="azni-app"
-NAMESPACE="azni-namspace"
+NAMESPACE="azni-mysql"
 CHART_PATH="."
-VALUES_FILE="values-azni-namspace.yaml"
+VALUES_FILE="values-azni-mysql.yaml"
 
 # Update kubeconfig for EKS cluster
 echo "Updating kubeconfig for EKS cluster..."
-aws eks update-kubeconfig --name shared-eks-cluster --region us-east-1
+aws eks update-kubeconfig --name dev-eks-cluster --region us-east-1
 
 # Create namespace if it doesn't exist
 echo "Creating namespace $NAMESPACE if it doesn't exist..."
