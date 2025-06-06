@@ -1,0 +1,41 @@
+{{- if .Values.validationHooks.enabled -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "azni-app.fullname" . }}-validation
+  labels:
+    {{- include "azni-app.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "azni-app.labels" . | nindent 8 }}
+        app.kubernetes.io/component: validation
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "azni-app.serviceAccountName" . }}
+      containers:
+        - name: validation
+          image: {{ .Values.validationHooks.image.repository }}:{{ .Values.validationHooks.image.tag }}
+          imagePullPolicy: {{ .Values.validationHooks.image.pullPolicy }}
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              echo "Starting validation checks..."
+              # Check MySQL service is available
+              for i in $(seq 1 30); do
+                echo "Attempt $i: Checking MySQL connection..."
+                if nc -z -v {{ include "azni-app.fullname" . }} {{ .Values.service.port }} > /dev/null 2>&1; then
+                  echo "MySQL service is available!"
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "MySQL service is not available after multiple attempts"
+              exit 1
+{{- end }} 

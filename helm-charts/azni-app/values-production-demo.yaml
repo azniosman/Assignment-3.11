@@ -1,0 +1,92 @@
+# Demo Production environment values for azni-app
+# Simplified for demonstration purposes
+
+global:
+  environment: production
+
+# Higher replica count for production
+replicaCount: 2
+
+# Production image settings
+image:
+  repository: nginx
+  pullPolicy: IfNotPresent
+  tag: "1.21"
+
+# Disable MySQL for demo
+mysql: {}
+
+# Frontend configuration for production
+frontend:
+  enabled: true
+  replicaCount: 2
+  
+  image:
+    repository: nginx
+    tag: "1.21"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 80
+  
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Service configuration
+service:
+  type: LoadBalancer
+  port: 80
+
+# Ingress configuration for production
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: azni-app-prod.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Resource limits for production
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Autoscaling enabled for production
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70
+
+# Network policy disabled for demo
+networkPolicy:
+  enabled: false
+
+# Validation hooks disabled for demo
+validationHooks:
+  enabled: false
+
+# Simple node selector
+nodeSelector:
+  kubernetes.io/os: linux
+
+# No tolerations
+tolerations: []
+
+# Simple affinity
+affinity: {}

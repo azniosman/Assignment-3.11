@@ -1,113 +1,207 @@
-# azni-app Helm Chart
+# Azni-App Helm Chart
 
-This Helm chart deploys a MySQL application to Kubernetes with customizable configuration.
+A comprehensive Helm chart for deploying a MySQL application with a frontend dashboard to Kubernetes.
+
+## Features
+
+- **MySQL Database**: Configurable MySQL deployment with persistence
+- **Frontend Dashboard**: Nginx-based web UI for visualization
+- **Scalability**: Horizontal Pod Autoscaler for both components
+- **Security**:
+  - Kubernetes Secrets for sensitive data
+  - Network Policies for restricted access
+  - TLS configuration for secure ingress
+- **High Availability**: Pod anti-affinity rules for better distribution
+- **Monitoring**: Prometheus readiness for observability
+- **Validation**: Pre/post deployment hooks for validation
 
 ## Prerequisites
 
 - Kubernetes 1.19+
 - Helm 3.2.0+
-- Namespace `azni-mysql` created in the cluster
+- AWS EKS Cluster (for default configuration)
+- kubectl configured to communicate with your cluster
+- AWS CLI configured with appropriate permissions
 
-## Installing the Chart
+## Installation
 
-To install the chart with the release name `my-release` in the `azni-mysql` namespace:
-
-```bash
-helm install my-release ./azni-app -n azni-mysql
-```
-
-To install with custom values:
+### Add the Repository (if hosted externally)
 
 ```bash
-helm install my-release ./azni-app -n azni-mysql -f values-azni-mysql.yaml
+helm repo add azni-repo https://your-repo-url.com
+helm repo update
 ```
 
-## Uninstalling the Chart
-
-To uninstall/delete the `my-release` deployment:
+### Install the MySQL Component
 
 ```bash
-helm uninstall my-release -n azni-mysql
+cd helm-charts/azni-app
+./deploy.sh
 ```
 
-## Parameters
+This script will:
 
-### Global parameters
+1. Update kubeconfig for the EKS cluster
+2. Create the namespace if it doesn't exist
+3. Install/upgrade the MySQL release
 
-| Name               | Description        | Value          |
-| ------------------ | ------------------ | -------------- |
-| `replicaCount`     | Number of replicas | `2`            |
-| `image.repository` | Image repository   | `mysql`        |
-| `image.tag`        | Image tag          | `latest`       |
-| `image.pullPolicy` | Image pull policy  | `IfNotPresent` |
-
-### Service parameters
-
-| Name           | Description  | Value          |
-| -------------- | ------------ | -------------- |
-| `service.type` | Service type | `LoadBalancer` |
-| `service.port` | Service port | `3306`         |
-
-### Ingress parameters
-
-| Name                    | Description        | Value                         |
-| ----------------------- | ------------------ | ----------------------------- |
-| `ingress.enabled`       | Enable ingress     | `true`                        |
-| `ingress.className`     | Ingress class name | `nginx`                       |
-| `ingress.hosts[0].host` | Hostname           | `azni-mysql-sctp-sandbox.com` |
-
-### Resource parameters
-
-| Name                        | Description     | Value   |
-| --------------------------- | --------------- | ------- |
-| `resources.limits.cpu`      | CPU limits      | `200m`  |
-| `resources.limits.memory`   | Memory limits   | `256Mi` |
-| `resources.requests.cpu`    | CPU requests    | `100m`  |
-| `resources.requests.memory` | Memory requests | `128Mi` |
-
-### Autoscaling parameters
-
-| Name                                            | Description                | Value  |
-| ----------------------------------------------- | -------------------------- | ------ |
-| `autoscaling.enabled`                           | Enable autoscaling         | `true` |
-| `autoscaling.minReplicas`                       | Minimum number of replicas | `2`    |
-| `autoscaling.maxReplicas`                       | Maximum number of replicas | `5`    |
-| `autoscaling.targetCPUUtilizationPercentage`    | Target CPU utilization     | `70`   |
-| `autoscaling.targetMemoryUtilizationPercentage` | Target memory utilization  | `70`   |
-
-## Custom Values for azni-mysql
-
-A custom values file `values-azni-mysql.yaml` has been created with specific configurations for the `azni-mysql` namespace. This includes:
-
-- 3 replicas
-- Always pull policy
-- Stable image tag
-- Higher resource limits
-- Namespace-specific ingress host
-- Production environment labels
-
-To use these custom values:
+### Install the Frontend Component
 
 ```bash
-helm install my-release ./azni-app -n azni-mysql -f values-azni-mysql.yaml
+cd helm-charts/azni-app
+./deploy-frontend.sh
 ```
 
-## Upgrading the Chart
-
-To upgrade the chart with the release name `my-release`:
+### Install Both Components at Once
 
 ```bash
-helm upgrade my-release ./azni-app -n azni-mysql
+cd helm-charts/azni-app
+./deploy-all.sh
 ```
 
-## Rolling Back a Release
+## Configuration
 
-To roll back to a previous release:
+### Global Parameters
+
+| Parameter            | Description                                    | Default       |
+| -------------------- | ---------------------------------------------- | ------------- |
+| `global.environment` | Environment (development, staging, production) | `development` |
+
+### MySQL Parameters
+
+| Parameter                  | Description                            | Default                |
+| -------------------------- | -------------------------------------- | ---------------------- |
+| `replicaCount`             | Number of MySQL replicas               | `1`                    |
+| `image.repository`         | MySQL image repository                 | `mysql`                |
+| `image.tag`                | MySQL image tag                        | `5.7`                  |
+| `mysql.rootPassword`       | MySQL root password (stored in Secret) | `""` (random if empty) |
+| `mysql.database`           | MySQL database name                    | `azni_db`              |
+| `mysql.user`               | MySQL username                         | `azni_user`            |
+| `mysql.password`           | MySQL password (stored in Secret)      | `""` (random if empty) |
+| `persistence.enabled`      | Enable persistence for MySQL data      | `true`                 |
+| `persistence.size`         | PVC size                               | `10Gi`                 |
+| `persistence.storageClass` | Storage class for PVC                  | `gp2`                  |
+| `service.type`             | Service type                           | `NodePort`             |
+| `service.port`             | Service port                           | `3306`                 |
+| `service.nodePort`         | NodePort (if applicable)               | `30307`                |
+| `networkPolicy.enabled`    | Enable NetworkPolicy                   | `true` (in production) |
+
+### Frontend Parameters
+
+| Parameter             | Description                 | Default                    |
+| --------------------- | --------------------------- | -------------------------- |
+| `replicaCount`        | Number of frontend replicas | `2`                        |
+| `image.repository`    | Frontend image repository   | `nginx`                    |
+| `image.tag`           | Frontend image tag          | `stable`                   |
+| `service.type`        | Service type                | `NodePort`                 |
+| `service.port`        | Service port                | `80`                       |
+| `service.nodePort`    | NodePort (if applicable)    | `30080`                    |
+| `ingress.enabled`     | Enable ingress              | `true`                     |
+| `ingress.annotations` | Ingress annotations         | See values.yaml            |
+| `ingress.hosts`       | Ingress hosts               | `frontend.your-domain.com` |
+
+## Security Considerations
+
+### Credential Management
+
+Production deployments should use external secrets management:
+
+```yaml
+mysql:
+  # Instead of putting actual passwords in values files
+  existingSecret: "my-external-secret"
+```
+
+### Network Security
+
+Network policies are enabled by default in production environments:
+
+```yaml
+networkPolicy:
+  enabled: true
+  additionalIngressRules:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+```
+
+## Maintenance
+
+### Upgrading
 
 ```bash
-# List releases
-helm history my-release -n azni-mysql
-
-# Roll back to a specific revision
-helm rollback my-release 1 -n azni-mysql
+helm upgrade my-release ./azni-app -n azni-mysql -f values-custom.yaml
 ```
+
+### Rolling Back
+
+```bash
+./rollback.sh
+```
+
+### Uninstalling
+
+```bash
+./uninstall.sh
+```
+
+## Development and Customization
+
+### Creating Environment-Specific Values
+
+1. Copy an existing values file:
+
+   ```bash
+   cp values-azni-mysql.yaml values-staging.yaml
+   ```
+
+2. Modify parameters as needed:
+
+   ```yaml
+   global:
+     environment: staging
+   replicaCount: 2
+   ```
+
+3. Deploy using the custom values:
+   ```bash
+   helm install my-release ./azni-app -n azni-staging -f values-staging.yaml
+   ```
+
+### Adding Custom Templates
+
+The chart structure follows standard Helm conventions. To add a custom template:
+
+1. Create your template in the `templates/` directory
+2. Define relevant values in `values.yaml`
+3. Use the helper functions for consistent naming:
+   ```yaml
+   { { - include "azni-app.fullname" . } }
+   ```
+
+## Troubleshooting
+
+### Common Issues
+
+- **PVC Creation Failure**: Check storage class availability
+
+  ```bash
+  kubectl get sc
+  ```
+
+- **Secret Access Issues**: Verify secret exists and has correct format
+
+  ```bash
+  kubectl get secret -n azni-mysql
+  kubectl describe secret azni-app-mysql-secrets -n azni-mysql
+  ```
+
+- **Network Policy Blocking**: If pods can't communicate, check network policies
+  ```bash
+  kubectl get networkpolicies -n azni-mysql
+  ```
+
+## License
+
+This Helm chart is licensed under the MIT License.

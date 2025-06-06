@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: production
+
+resources:
+  - ../../base
+
+patches:
+  - target:
+      kind: HelmRelease
+      name: azni-app
+    patch: |-
+      - op: replace
+        path: /spec/values/service/type
+        value: LoadBalancer
+      - op: replace
+        path: /spec/values/resources/requests/cpu
+        value: 200m
+      - op: replace
+        path: /spec/values/resources/requests/memory
+        value: 256Mi
+      - op: replace
+        path: /spec/values/resources/limits/cpu
+        value: 500m
+      - op: replace
+        path: /spec/values/resources/limits/memory
+        value: 512Mi
+      - op: add
+        path: /spec/values/ingress
+        value:
+          enabled: true
+          hostname: app.example.com
+          tls: true
+          annotations:
+            kubernetes.io/ingress.class: nginx
+            cert-manager.io/cluster-issuer: letsencrypt-prod
+
+commonLabels:
+  environment: production

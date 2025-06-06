@@ -1,0 +1,128 @@
+# Simplified Production environment values for azni-app
+# This file contains production-specific configurations without complex scheduling
+
+global:
+  environment: production
+
+# Higher replica count for production
+replicaCount: 3
+
+# Production image settings
+image:
+  repository: nginx
+  pullPolicy: IfNotPresent
+  tag: "1.21"
+
+# MySQL configuration for production
+mysql:
+  # In production, these should be set via external secrets
+  rootPassword: ""  # Will be generated
+  database: "azni_prod_db"
+  user: "azni_prod_user"
+  password: ""  # Will be generated
+  
+  image:
+    repository: mysql
+    tag: "8.0"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 3306
+  
+  persistence:
+    enabled: true
+    storageClass: "gp2"
+    size: 20Gi
+    accessMode: ReadWriteOnce
+  
+  config:
+    maxConnections: 500
+    innodbBufferPoolSize: "1G"
+
+# Frontend configuration for production
+frontend:
+  enabled: true
+  replicaCount: 3
+  
+  image:
+    repository: nginx
+    tag: "1.21"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 80
+  
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Service configuration
+service:
+  type: LoadBalancer
+  port: 80
+
+# Ingress configuration for production
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: azni-app-prod.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Resource limits for production
+resources:
+  limits:
+    cpu: 300m
+    memory: 384Mi
+  requests:
+    cpu: 150m
+    memory: 192Mi
+
+# Autoscaling enabled for production
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 70
+
+# Network policy disabled for simplicity
+networkPolicy:
+  enabled: false
+
+# Validation hooks disabled for simplicity
+validationHooks:
+  enabled: false
+
+# Simple node selector
+nodeSelector:
+  kubernetes.io/os: linux
+
+# No tolerations
+tolerations: []
+
+# Simple affinity for production
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - azni-app
+          topologyKey: kubernetes.io/hostname

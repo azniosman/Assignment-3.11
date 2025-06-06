@@ -1,0 +1,17 @@
+{{- if .Values.mysql.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "azni-app.fullname" . }}-mysql-data
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "azni-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+spec:
+  accessModes:
+    - {{ .Values.mysql.persistence.accessMode | default "ReadWriteOnce" }}
+  storageClassName: {{ .Values.mysql.persistence.storageClass | default "gp2" }}
+  resources:
+    requests:
+      storage: {{ .Values.mysql.persistence.size | default "10Gi" }}
+{{- end }}

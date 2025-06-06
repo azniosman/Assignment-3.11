@@ -1,4 +1,7 @@
 # Custom values for azni-app deployment in azni-mysql
+global:
+  environment: production
+
 replicaCount: 1
 
 image:
@@ -6,21 +9,67 @@ image:
   pullPolicy: IfNotPresent
   tag: "5.7"
 
-# Environment variables for MySQL
+# MySQL configuration
+mysql:
+  rootPassword: "password123" # In production, use external secrets management
+  database: "azni_db"
+  user: "azni_user"
+  password: "azni_password" # In production, use external secrets management
+
+# Persistence configuration for MySQL data
+persistence:
+  enabled: true
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  storageClass: gp2
+  annotations: {}
+
+# Environment variables for MySQL - will be replaced with secretKeyRef
 env:
   - name: MYSQL_ROOT_PASSWORD
-    value: "password123"
+    valueFrom:
+      secretKeyRef:
+        name: azni-app-mysql-secrets
+        key: mysql-root-password
   - name: MYSQL_DATABASE
-    value: "azni_db"
+    valueFrom:
+      secretKeyRef:
+        name: azni-app-mysql-secrets
+        key: mysql-database
   - name: MYSQL_USER
-    value: "azni_user"
+    valueFrom:
+      secretKeyRef:
+        name: azni-app-mysql-secrets
+        key: mysql-user
   - name: MYSQL_PASSWORD
-    value: "azni_password"
+    valueFrom:
+      secretKeyRef:
+        name: azni-app-mysql-secrets
+        key: mysql-password
+
+# Enable network policy for production
+networkPolicy:
+  enabled: true
+  additionalIngressRules:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - port: 3306
+          protocol: TCP
+
+# Enable validation hooks
+validationHooks:
+  enabled: true
 
 service:
   type: NodePort
   port: 3306
   nodePort: 30307
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9104"
 
 ingress:
   enabled: true
@@ -29,20 +78,25 @@ ingress:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
   hosts:
-    - host: azni-mysql-sctp-sandbox.com
+    - host: mysql.your-domain.com
       paths:
         - path: /mysql
           pathType: Prefix
-  tls: []
+  tls:
+    - secretName: mysql-tls
+      hosts:
+        - mysql.your-domain.com
 
 resources:
   limits:
-    cpu: 300m
-    memory: 512Mi
+    cpu: 500m
+    memory: 768Mi
   requests:
-    cpu: 150m
-    memory: 256Mi
+    cpu: 250m
+    memory: 512Mi
 
 autoscaling:
   enabled: true
@@ -55,6 +109,7 @@ autoscaling:
 podLabels:
   environment: production
   namespace: azni-mysql
+  component: database
 
 # Add tolerations for CriticalAddonsOnly nodes
 tolerations:
@@ -62,7 +117,7 @@ tolerations:
     operator: "Exists"
     effect: "NoSchedule"
 
-# Simple probes for MySQL
+# Improved MySQL probes with better parameters
 livenessProbe:
   exec:
     command:
@@ -70,8 +125,13 @@ livenessProbe:
       - "ping"
       - "-h"
       - "localhost"
-  initialDelaySeconds: 30
-  periodSeconds: 10
+      - "-u"
+      - "root"
+      - "-p${MYSQL_ROOT_PASSWORD}"
+  initialDelaySeconds: 60
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 3
 
 readinessProbe:
   exec:
@@ -80,9 +140,36 @@ readinessProbe:
       - "ping"
       - "-h"
       - "localhost"
+      - "-u"
+      - "root"
+      - "-p${MYSQL_ROOT_PASSWORD}"
   initialDelaySeconds: 30
   periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 2
 
-# MySQL doesn't need any volumes for this basic setup
-volumes: []
-volumeMounts: []
+# Persistent volume for MySQL data
+volumes:
+  - name: mysql-data
+    persistentVolumeClaim:
+      claimName: mysql-data-pvc
+
+volumeMounts:
+  - name: mysql-data
+    mountPath: /var/lib/mysql
+
+# Add affinity rules to avoid scheduling multiple MySQL pods on the same node
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values:
+                - azni-app
+            - key: app.kubernetes.io/component
+              operator: In
+              values:
+                - database
+        topologyKey: "kubernetes.io/hostname"

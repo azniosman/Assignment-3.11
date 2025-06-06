@@ -1,0 +1,140 @@
+# Custom values for frontend deployment in azni-mysql namespace
+global:
+  environment: production
+
+replicaCount: 2
+
+image:
+  repository: nginx
+  pullPolicy: IfNotPresent
+  tag: "stable"
+
+# Environment variables for frontend
+env:
+  - name: BACKEND_HOST
+    value: "azni-app"
+  - name: BACKEND_PORT
+    value: "3306"
+  - name: NAMESPACE
+    value: "azni-mysql"
+  - name: ENVIRONMENT
+    value: "production"
+
+# Enable network policy for production
+networkPolicy:
+  enabled: true
+
+# Enable validation hooks
+validationHooks:
+  enabled: true
+  image:
+    repository: curlimages/curl
+    tag: "7.78.0"
+    pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 80
+  nodePort: 30080
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "80"
+
+ingress:
+  enabled: true
+  className: ""
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:region:account-id:certificate/certificate-id" # Replace with actual ARN
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-Frame-Options: SAMEORIGIN";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+  hosts:
+    - host: azni-frontend-sctp-sandbox.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: frontend-tls
+      hosts:
+        - frontend.your-domain.com
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 384Mi
+  requests:
+    cpu: 150m
+    memory: 192Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 70
+
+# Disable persistence for frontend (not needed)
+persistence:
+  enabled: false
+
+# Add namespace-specific labels
+podLabels:
+  environment: production
+  namespace: azni-mysql
+  component: frontend
+
+# Standard probes for nginx
+livenessProbe:
+  httpGet:
+    path: /
+    port: 80
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: 80
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 2
+
+# Volume for frontend content
+volumes:
+  - name: frontend-content
+    configMap:
+      name: frontend-content
+      defaultMode: 0755
+
+volumeMounts:
+  - name: frontend-content
+    mountPath: /usr/share/nginx/html
+    readOnly: true
+
+# Add affinity rules to spread frontend pods across nodes
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - azni-app
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - frontend
+          topologyKey: "kubernetes.io/hostname"

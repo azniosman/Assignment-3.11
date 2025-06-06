@@ -1,0 +1,43 @@
+# Upgrade demonstration values
+global:
+  environment: development
+
+replicaCount: 2
+
+image:
+  repository: nginx
+  pullPolicy: IfNotPresent
+  tag: "1.21"  # Upgraded from latest
+
+mysql:
+  rootPassword: "upgraded-dev-password"
+  database: "azni_dev_db_v2"
+  user: "azni_dev_user"
+  password: "upgraded-dev-password"
+  
+  persistence:
+    enabled: true
+    storageClass: "gp2"
+    size: 8Gi  # Increased from 5Gi
+
+frontend:
+  enabled: true
+  replicaCount: 2  # Increased from 1
+  
+  image:
+    repository: nginx
+    tag: "1.21"  # Upgraded from latest
+
+resources:
+  limits:
+    cpu: 150m    # Increased from 100m
+    memory: 192Mi # Increased from 128Mi
+  requests:
+    cpu: 75m     # Increased from 50m
+    memory: 96Mi  # Increased from 64Mi
+
+autoscaling:
+  enabled: true  # Enabled for upgrade demo
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 75

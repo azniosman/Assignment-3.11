@@ -1,6 +1,6 @@
 apiVersion: v2
 name: azni-app
-description: A Helm chart for Kubernetes deployment in azni-namspace
+description: A comprehensive Helm chart for deploying MySQL application with frontend dashboard on Kubernetes
 
 # A chart can be either an 'application' or a 'library' chart.
 #
@@ -15,10 +15,28 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 0.1.0
+version: 0.2.0
 
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "1.16.0"
+appVersion: "1.17.0"
+
+# Keywords for easier discovery
+keywords:
+  - mysql
+  - database
+  - web
+  - nginx
+  - kubernetes
+
+# Maintainer information
+maintainers:
+  - name: Azni
+    email: azni@example.com
+
+# Home page and source URLs
+home: https://github.com/azni/azni-app
+sources:
+  - https://github.com/azni/azni-app

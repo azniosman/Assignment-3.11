@@ -1,107 +1,107 @@
-# Assignment 3.11 - Helm Charts for Kubernetes
+# Helm and Kustomize Integration with ArgoCD
 
-This repository contains Helm charts for deploying applications to Kubernetes.
+This repository demonstrates how to use Helm and Kustomize together with ArgoCD for managing Kubernetes applications across different environments.
 
 ## Repository Structure
 
 ```
 .
-└── helm-charts/
-    └── azni-app/
-        ├── Chart.yaml
-        ├── values.yaml
-        ├── values-azni-mysql.yaml
-        ├── templates/
-        ├── charts/
-        ├── README.md
-        ├── deploy.sh
-        ├── rollback.sh
-        └── uninstall.sh
+├── base/                    # Base Kustomize configuration
+│   ├── kustomization.yaml
+│   └── helm-release.yaml    # Helm release definition
+├── overlays/               # Environment-specific overlays
+│   ├── development/
+│   │   ├── kustomization.yaml
+│   │   └── values.yaml
+│   └── production/
+│       ├── kustomization.yaml
+│       └── values.yaml
+└── argocd/                 # ArgoCD application definitions
+    ├── applications/
+    │   ├── development.yaml
+    │   └── production.yaml
+    └── projects/
+        └── demo-project.yaml
 ```
 
-## Helm Charts
+## How It Works
 
-### azni-app
+1. **Helm Charts**: We use Helm charts to package our application and its dependencies.
+2. **Kustomize**: We use Kustomize to customize the Helm releases for different environments.
+3. **ArgoCD**: ArgoCD manages the deployment of our customized Helm releases.
 
-A Helm chart for deploying a MySQL application to Kubernetes. The chart includes:
+## Setup Instructions
 
-- Deployment with configurable replicas
-- Service (LoadBalancer)
-- Ingress with TLS
-- Horizontal Pod Autoscaler
-- Resource limits and requests
-- Liveness and readiness probes
+1. Install required tools:
 
-For more details, see the [azni-app README](helm-charts/azni-app/README.md).
+   ```bash
+   # Install Helm
+   curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-## Deployment
+   # Install Kustomize
+   curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
 
-The Helm charts are configured to be deployed to the `azni-mysql` namespace on the `dev-eks-cluster` EKS cluster.
+   # Install ArgoCD CLI
+   brew install argocd
+   ```
 
-### Prerequisites
+2. Add the Helm repository:
 
-- AWS CLI configured with appropriate credentials
-- kubectl installed and configured
-- Helm 3.x installed
+   ```bash
+   helm repo add bitnami https://charts.bitnami.com/bitnami
+   helm repo update
+   ```
 
-### Deploying a Chart
+3. Deploy ArgoCD:
 
-To deploy the azni-app chart:
+   ```bash
+   kubectl create namespace argocd
+   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+   ```
 
-```bash
-cd helm-charts/azni-app
-./deploy.sh
-```
+4. Apply the ArgoCD applications:
+   ```bash
+   kubectl apply -f argocd/projects/demo-project.yaml
+   kubectl apply -f argocd/applications/
+   ```
 
-### Rolling Back a Release
+## Environment-Specific Configuration
 
-To roll back a release:
+- **Development**: Uses minimal resources and debug settings
+- **Production**: Uses production-grade resources and security settings
 
-```bash
-cd helm-charts/azni-app
-./rollback.sh
-```
+## Best Practices
 
-### Uninstalling a Release
+1. Always use semantic versioning for Helm charts
+2. Keep sensitive values in sealed secrets
+3. Use ArgoCD's sync waves for proper deployment order
+4. Implement health checks and readiness probes
+5. Use resource quotas and limits
+6. Implement proper RBAC policies
 
-To uninstall a release:
+## Troubleshooting
 
-```bash
-cd helm-charts/azni-app
-./uninstall.sh
-```
+1. Check ArgoCD application status:
 
-## Customization
+   ```bash
+   argocd app get <app-name>
+   ```
 
-Each chart includes a default `values.yaml` file and a namespace-specific values file (e.g., `values-azni-mysql.yaml`). You can customize these files to change the behavior of the deployed applications.
+2. View application logs:
 
-## Helm Commands Reference
+   ```bash
+   argocd app logs <app-name>
+   ```
 
-```bash
-# Add a repository
-helm repo add bitnami https://charts.bitnami.com/bitnami
+3. Sync application manually:
+   ```bash
+   argocd app sync <app-name>
+   ```
 
-# Search for charts
-helm search repo mysql
+## Security Considerations
 
-# Install a chart
-helm install my-release ./azni-app -n azni-mysql
-
-# Upgrade a release
-helm upgrade my-release ./azni-app -n azni-mysql
-
-# Rollback a release
-helm rollback my-release 1 -n azni-mysql
-
-# Uninstall a release
-helm uninstall my-release -n azni-mysql
-
-# List releases
-helm list -n azni-mysql
-
-# Get release history
-helm history my-release -n azni-mysql
-
-# Package a chart
-helm package ./azni-app
-```
+1. Use sealed secrets for sensitive data
+2. Implement network policies
+3. Use service accounts with minimal permissions
+4. Enable RBAC
+5. Regular security scanning of container images

@@ -1,0 +1,146 @@
+# Production environment values for azni-app
+# This file contains production-specific configurations
+
+global:
+  environment: production
+
+# Higher replica count for production
+replicaCount: 3
+
+# Production image settings
+image:
+  repository: nginx
+  pullPolicy: IfNotPresent
+  tag: "1.21"
+
+# MySQL configuration for production
+mysql:
+  # In production, these should be set via external secrets
+  rootPassword: "" # Will be generated or set via external secret
+  database: "azni_prod_db"
+  user: "azni_prod_user"
+  password: "" # Will be generated or set via external secret
+
+  image:
+    repository: mysql
+    tag: "8.0"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 3306
+
+  persistence:
+    enabled: true
+    storageClass: "gp2"
+    size: 50Gi
+    accessMode: ReadWriteOnce
+
+  config:
+    maxConnections: 500
+    innodbBufferPoolSize: "1G"
+
+# Frontend configuration for production
+frontend:
+  enabled: true
+  replicaCount: 3
+
+  image:
+    repository: nginx
+    tag: "1.21"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 80
+
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Service configuration
+service:
+  type: LoadBalancer
+  port: 80
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+
+# Ingress configuration for production
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    kubernetes.io/tls-acme: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: azni-app.production.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: azni-app-prod-tls
+      hosts:
+        - azni-app.production.com
+
+# Resource limits for production (higher limits)
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+# Autoscaling enabled for production
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 70
+
+# Network policy enabled for production
+networkPolicy:
+  enabled: true
+  additionalIngressRules:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 80
+
+# Validation hooks enabled for production
+validationHooks:
+  enabled: true
+
+# Production node selector
+nodeSelector:
+  kubernetes.io/os: linux
+
+# Tolerations for production workloads
+tolerations: []
+
+# Enhanced affinity for production
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - azni-app
+          topologyKey: kubernetes.io/hostname
