@@ -8,23 +8,27 @@ resources:
 
 patches:
   - target:
-      kind: HelmRelease
+      kind: Service
       name: azni-app
     patch: |-
       - op: replace
-        path: /spec/values/service/type
+        path: /spec/type
         value: NodePort
+  - target:
+      kind: Deployment
+      name: azni-app
+    patch: |-
       - op: replace
-        path: /spec/values/resources/requests/cpu
+        path: /spec/template/spec/containers/0/resources/requests/cpu
         value: 50m
       - op: replace
-        path: /spec/values/resources/requests/memory
+        path: /spec/template/spec/containers/0/resources/requests/memory
         value: 64Mi
       - op: replace
-        path: /spec/values/resources/limits/cpu
+        path: /spec/template/spec/containers/0/resources/limits/cpu
         value: 100m
       - op: replace
-        path: /spec/values/resources/limits/memory
+        path: /spec/template/spec/containers/0/resources/limits/memory
         value: 128Mi
 
 commonLabels:

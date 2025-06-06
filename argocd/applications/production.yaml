@@ -6,7 +6,7 @@ metadata:
 spec:
   project: azni-project
   source:
-    repoURL: https://github.com/azniosman/Assignment-3.13.git
+    repoURL: https://github.com/azniosman/Assignment-3.11.git
     targetRevision: main
     path: overlays/production
   destination:
